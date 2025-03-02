@@ -27,7 +27,7 @@ func Connect(cfg *config.Config) (*gorm.DB, error) {
 
 	sqlDB, err := db.DB()
 	if err != nil {
-		log.Fatalf("failed to get database handle: %v", err)
+		log.Fatalf("Ошибка получения базы данных: %v", err)
 	}
 
 	if err := sqlDB.Ping(); err != nil {
@@ -50,7 +50,7 @@ func applyMigrations(db *sql.DB) error {
 	migrationsDir := "./db/migrations"
 
 	if err := goose.Up(db, migrationsDir); err != nil {
-		return fmt.Errorf("ошибка выполнения миграций: %w", err)
+		return fmt.Errorf("Ошибка выполнения миграций: %w", err)
 	}
 
 	log.Println("Миграции успешно применены")

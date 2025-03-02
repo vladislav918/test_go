@@ -1,63 +1,51 @@
 package main
 
 import (
-	"log/slog"
-	"net/http"
+	"context"
+	"log"
 	"os"
+	"os/signal"
+	"syscall"
+	product "test-project"
 	"test-project/internal/config"
 	repository "test-project/internal/database/postgres"
+	handler "test-project/internal/handlers"
+	"time"
 )
 
 func main() {
-	if err := run(); err != nil {
-		log := setupLogger("local")
-		log.Error("application terminated with an error")
-		os.Exit(1)
-	}
-}
-
-func run() error {
 	cfg := config.Load()
 
-	log := setupLogger(cfg.Env)
-
-	log.Info(
-		"starting book service",
-		slog.String("env", cfg.Env),
-		slog.String("version", "123"),
-	)
-	log.Debug("debug messages are enabled")
-
-	_, err := repository.Connect(cfg)
+	db, err := repository.Connect(cfg)
 	if err != nil {
-		log.Error("database connection failed", slog.Any("error", err))
+		log.Fatal("Ошибка подключения к базе данных", err)
 		os.Exit(1)
 	}
 
-	log.Info("Successfull connect to the database")
-	log.Info("Successful connect to the database")
+	repo := repository.NewRepository(db)
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Hello, World!"))
-	})
+	handlerInstance := handler.NewHandler(repo)
+	router := handlerInstance.InitRoutes()
+	srv := new(product.Server)
+	go func() {
+		if err := srv.Run("8080", router); err != nil {
+			log.Fatalf("Ошибка запуска сервера: %s", err)
+		}
+	}()
 
-	log.Info("Server is running on port 8080")
-	return http.ListenAndServe(":8080", nil)
-}
+	log.Println("Сервер запущен на порту 8080")
 
-func setupLogger(env string) *slog.Logger {
-	var level slog.Level
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 
-	switch env {
-	case "local":
-		level = slog.LevelDebug
-	case "production":
-		level = slog.LevelInfo
-	default:
-		level = slog.LevelWarn
+	<-quit
+
+	log.Println("Завершение работы сервера...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatalf("Сервер был вынужден выключиться: %s", err)
 	}
-
-	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: level})
-	return slog.New(handler)
 }

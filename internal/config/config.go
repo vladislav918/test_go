@@ -37,22 +37,22 @@ func Load() *Config {
 	once.Do(func() {
 		err := godotenv.Load()
 		if err != nil {
-			log.Fatal("Error loading .env file")
+			log.Fatal("Ошибка загрузки .env файла")
 		}
 
 		configPath := os.Getenv("CONFIG_PATH")
 		if configPath == "" {
-			log.Fatal("CONFIG_PATH is not set")
+			log.Fatal("CONFIG_PATH не установлен")
 		}
 
 		if _, err := os.Stat(configPath); os.IsNotExist(err) {
-			log.Fatalf("config file does not exist: %s", configPath)
+			log.Fatalf("Конфиг файл не найден: %s", configPath)
 		}
 
 		var localCfg Config
 
 		if err := cleanenv.ReadConfig(configPath, &localCfg); err != nil {
-			log.Fatalf("cannot read config: %s", err)
+			log.Fatalf("Невозможно прочитать файл: %s", err)
 		}
 		cfg = &localCfg
 	})

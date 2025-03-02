@@ -15,13 +15,29 @@ func NewProductRepository(db *gorm.DB) *ProductRepository {
 }
 
 func (r *ProductRepository) FindAll() ([]models.Product, error) {
-	var books []models.Product
-	if result := r.DB.Find(&books); result.Error != nil {
+	var products []models.Product
+	if result := r.DB.Find(&products); result.Error != nil {
 		return nil, result.Error
 	}
-	return books, nil
+	return products, nil
 }
 
-func (r *ProductRepository) Create(book *models.Product) error {
-	return r.DB.Create(book).Error
+func (r *ProductRepository) FindByID(id int) (*models.Product, error) {
+	var product models.Product
+	if result := r.DB.First(&product, id); result.Error != nil {
+		return nil, result.Error
+	}
+	return &product, nil
+}
+
+func (r *ProductRepository) Create(product *models.Product) error {
+	return r.DB.Create(product).Error
+}
+
+func (r *ProductRepository) Update(product *models.Product) error {
+	return r.DB.Save(product).Error
+}
+
+func (r *ProductRepository) Delete(id int) error {
+	return r.DB.Delete(&models.Product{}, id).Error
 }
